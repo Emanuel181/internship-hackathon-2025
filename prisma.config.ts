@@ -1,9 +1,13 @@
 import { config } from "dotenv";
-import { defineConfig, env } from "prisma/config";
+import { defineConfig } from "prisma/config";
 import { resolve } from "path";
 
 // Load environment variables from .env file
 config({ path: resolve(process.cwd(), ".env") });
+
+// Use a dummy URL during install if DATABASE_URL is not set
+// This allows prisma generate to run during npm ci without requiring the actual database
+const databaseUrl = process.env.DATABASE_URL || "postgresql://placeholder:placeholder@localhost:5432/placeholder";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -12,6 +16,6 @@ export default defineConfig({
   },
   engine: "classic",
   datasource: {
-    url: env("DATABASE_URL"),
+    url: databaseUrl,
   },
 });
