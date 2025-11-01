@@ -22,10 +22,13 @@ import {
   Wrench,
   Clock,
   TrendingUp,
-  GitCompare
+  GitCompare,
+  History
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ReviewComments } from '@/components/review-comments';
+import { FileVersionHistory } from '@/components/file-version-history';
+import { IncrementalHistoryAnalysis } from '@/components/incremental-history-analysis';
 
 export function CodeReviewPanel({ fileKey, fileName, onClose }) {
   const [loading, setLoading] = useState(false);
@@ -42,20 +45,32 @@ export function CodeReviewPanel({ fileKey, fileName, onClose }) {
   const [availableFixes, setAvailableFixes] = useState({});
   const [showComments, setShowComments] = useState(false);
   const [applyingFix, setApplyingFix] = useState(null);
+  const [showIncrementalHistoryAnalysis, setShowIncrementalHistoryAnalysis] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
 
   const startReview = async () => {
+    // If in incremental mode, open the history analysis instead
+    if (reviewMode === 'incremental') {
+      setShowIncrementalHistoryAnalysis(true);
+      return;
+    }
+
     setLoading(true);
     try {
       // First, store file version for incremental review support
-      await fetch('/api/file-version', {
+      const versionResponse = await fetch('/api/file-version', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileKey, fileName }),
       });
 
-      const endpoint = reviewMode === 'incremental'
-        ? '/api/code-review/incremental'
-        : '/api/code-review';
+      // If file version storage fails, warn user
+      if (!versionResponse.ok) {
+        const errorData = await versionResponse.json();
+        console.warn('File version storage failed:', errorData);
+      }
+
+      const endpoint = '/api/code-review';
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -64,17 +79,16 @@ export function CodeReviewPanel({ fileKey, fileName, onClose }) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to perform code review');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.details || 'Failed to perform code review');
       }
 
       const data = await response.json();
 
-      if (data.requiresFullReview) {
-        toast.info('No previous version found', {
-          description: 'Running full review instead',
-        });
-        setReviewMode('full');
-        return startReview();
+
+      // Validate response data structure
+      if (!data.analysis || !data.analysis.issues) {
+        throw new Error('Invalid response format from code review API');
       }
 
       setReviewData(data);
@@ -300,18 +314,53 @@ export function CodeReviewPanel({ fileKey, fileName, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b shrink-0">
-          <div className="flex items-center gap-2">
-            <FileCode className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Code Review</h2>
-          </div>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
+    <>
+      {showVersionHistory && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <FileVersionHistory
+            fileKey={fileKey}
+            fileName={fileName}
+            onClose={() => setShowVersionHistory(false)}
+            onSelectVersion={(version) => {
+              toast.info(`Selected version ${version.version}`);
+              setShowVersionHistory(false);
+            }}
+          />
         </div>
+      )}
+
+      {showIncrementalHistoryAnalysis && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <IncrementalHistoryAnalysis
+            fileKey={fileKey}
+            fileName={fileName}
+            onClose={() => setShowIncrementalHistoryAnalysis(false)}
+          />
+        </div>
+      )}
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <Card className="w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b shrink-0">
+            <div className="flex items-center gap-2">
+              <FileCode className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold">Code Review</h2>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowVersionHistory(true)}
+                className="gap-2"
+              >
+                <History className="h-4 w-4" />
+                History
+              </Button>
+              <Button variant="ghost" size="sm" onClick={onClose}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
 
         {/* Content */}
         <div className="flex-1 overflow-hidden">
@@ -724,6 +773,7 @@ export function CodeReviewPanel({ fileKey, fileName, onClose }) {
         </div>
       </Card>
     </div>
+    </>
   );
 }
 

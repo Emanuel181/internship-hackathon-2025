@@ -5,27 +5,40 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="84c72250-65ef-442e-ba3c-be751bb94ddf" name="Changes" comment="trial">
-      <change afterPath="$PROJECT_DIR$/BUILD_ERRORS_FIXED.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/FEATURES_IMPLEMENTED.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/app/api/code-review/incremental/route.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/app/api/estimate/route.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/app/api/file-version/[id]/diff/route.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/app/api/file-version/route.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/app/api/fixes/apply/route.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/app/api/fixes/available/route.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/app/api/fixes/preview/route.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/app/api/review-comments/[id]/route.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/app/api/review-comments/route.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/review-comments.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/ui/badge.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/lib/diff-engine.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/lib/effort-estimator.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/lib/fixes/fix-registry.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/lib/version-tracker.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/API_AUTH_FIX.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/FILE_EDITOR_CHECKLIST.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/FILE_EDITOR_IMPLEMENTATION.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/FILE_EDITOR_QUICKSTART.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/FILE_EDITOR_USER_GUIDE.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/HOME_PAGE_FIX.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/INCREMENTAL_HISTORY_ANALYSIS.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Screenshot 2025-11-01 171827.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/app/api/file-version/[id]/content/route.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/app/api/folder-analysis/route.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/components/file-editor.jsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/components/file-version-history.jsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/components/folder-analysis-panel.jsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/components/incremental-history-analysis.jsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/lib/multi-dimensional-analyzer.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/prisma/schema.prisma" beforeDir="false" afterPath="$PROJECT_DIR$/prisma/schema.prisma" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FEATURES_IMPLEMENTED.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/api/code-review/incremental/route.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/code-review/incremental/route.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/app/api/code-review/route.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/code-review/route.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/api/file-content/route.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/file-content/route.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/api/file-version/[id]/diff/route.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/file-version/[id]/diff/route.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/api/file-version/route.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/file-version/route.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/api/files/route.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/files/route.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/api/folders/route.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/folders/route.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/api/get-name/route.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/get-name/route.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/api/review-comments/route.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/review-comments/route.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/api/storage/route.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/storage/route.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/api/upload/route.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/api/upload/route.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/code-review-panel.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/code-review-panel.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/files-list.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/files-list.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/folder-tree-new/index.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/folder-tree-new/index.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib/s3.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/s3.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib/version-tracker.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/version-tracker.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -135,30 +148,6 @@
       <workItem from="1761984699534" duration="9000" />
       <workItem from="1761984781692" duration="4000" />
       <workItem from="1761984789007" duration="8665000" />
-    </task>
-    <task id="LOCAL-00005" summary="m">
-      <option name="closed" value="true" />
-      <created>1761779426302</created>
-      <option name="number" value="00005" />
-      <option name="presentableId" value="LOCAL-00005" />
-      <option name="project" value="LOCAL" />
-      <updated>1761779426302</updated>
-    </task>
-    <task id="LOCAL-00006" summary="m">
-      <option name="closed" value="true" />
-      <created>1761779475327</created>
-      <option name="number" value="00006" />
-      <option name="presentableId" value="LOCAL-00006" />
-      <option name="project" value="LOCAL" />
-      <updated>1761779475327</updated>
-    </task>
-    <task id="LOCAL-00007" summary="m">
-      <option name="closed" value="true" />
-      <created>1761779614989</created>
-      <option name="number" value="00007" />
-      <option name="presentableId" value="LOCAL-00007" />
-      <option name="project" value="LOCAL" />
-      <updated>1761779614989</updated>
     </task>
     <task id="LOCAL-00008" summary="m">
       <option name="closed" value="true" />
@@ -528,7 +517,31 @@
       <option name="project" value="LOCAL" />
       <updated>1761993850470</updated>
     </task>
-    <option name="localTasksCounter" value="54" />
+    <task id="LOCAL-00054" summary="trial">
+      <option name="closed" value="true" />
+      <created>1762000684263</created>
+      <option name="number" value="00054" />
+      <option name="presentableId" value="LOCAL-00054" />
+      <option name="project" value="LOCAL" />
+      <updated>1762000684263</updated>
+    </task>
+    <task id="LOCAL-00055" summary="trial">
+      <option name="closed" value="true" />
+      <created>1762000943293</created>
+      <option name="number" value="00055" />
+      <option name="presentableId" value="LOCAL-00055" />
+      <option name="project" value="LOCAL" />
+      <updated>1762000943293</updated>
+    </task>
+    <task id="LOCAL-00056" summary="trial">
+      <option name="closed" value="true" />
+      <created>1762005625059</created>
+      <option name="number" value="00056" />
+      <option name="presentableId" value="LOCAL-00056" />
+      <option name="project" value="LOCAL" />
+      <updated>1762005625059</updated>
+    </task>
+    <option name="localTasksCounter" value="57" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

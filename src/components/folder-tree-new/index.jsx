@@ -6,14 +6,20 @@ import { Tree } from '@/components/ui/tree-view';
 import { useFolderTreeNew } from './useFolderTreeNew';
 import { FolderTreeHeader } from './FolderTreeHeader';
 import { FolderTreeDialogs } from './FolderTreeDialogs';
-import { Folder, FolderOpen, FileIcon, Plus, Trash2, Download, RefreshCw, UploadCloud, FolderDown, FileSearch } from 'lucide-react';
+import { Folder, FolderOpen, FileIcon, Plus, Trash2, Download, RefreshCw, UploadCloud, FolderDown, FileSearch, Layers, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { CodeReviewPanel } from '@/components/code-review-panel';
+import { FolderAnalysisPanel } from '@/components/folder-analysis-panel';
+import { FileEditor } from '@/components/file-editor';
 
 export function FolderTree({ folders, onFolderSelect, selectedFolder, onFolderCreated, files = [] }) {
     const [reviewFile, setReviewFile] = useState(null);
+    const [analyzeFolder, setAnalyzeFolder] = useState(null);
+    const [editingFile, setEditingFile] = useState(null);
+    const [fileContent, setFileContent] = useState('');
+    const [loadingFile, setLoadingFile] = useState(false);
 
     const {
         expandedFolders,
@@ -126,6 +132,26 @@ export function FolderTree({ folders, onFolderSelect, selectedFolder, onFolderCr
         }
     };
 
+    const handleEdit = async (file) => {
+        setLoadingFile(true);
+        try {
+            const response = await fetch(`/api/file-content?fileKey=${encodeURIComponent(file.key)}`);
+            if (!response.ok) {
+                throw new Error('Failed to load file content');
+            }
+            const data = await response.json();
+            setFileContent(data.content);
+            setEditingFile(file);
+        } catch (error) {
+            console.error('Error loading file:', error);
+            toast.error('Failed to load file for editing', {
+                description: error.message,
+            });
+        } finally {
+            setLoadingFile(false);
+        }
+    };
+
     // Build tree data for the Tree component
     const buildTreeData = () => {
         // Create a map to store folders by path
@@ -160,6 +186,23 @@ export function FolderTree({ folders, onFolderSelect, selectedFolder, onFolderCr
                 },
                 actions: (
                     <div className="flex gap-1">
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        // Pass just the folder path - the API will handle userId
+                                        setAnalyzeFolder({ path: folderPath, name: folderName });
+                                    }}
+                                    className="h-6 w-6 p-0 hover:bg-accent"
+                                >
+                                    <Layers className="h-3 w-3 text-muted-foreground" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Analyze folder</TooltipContent>
+                        </Tooltip>
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <Button
@@ -301,6 +344,22 @@ export function FolderTree({ folders, onFolderSelect, selectedFolder, onFolderCr
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>Code Review</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEdit(file);
+                                    }}
+                                    className="h-6 w-6 p-0 hover:bg-accent text-blue-600"
+                                >
+                                    <Edit className="h-3 w-3" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Edit File</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                             <TooltipTrigger asChild>
@@ -566,6 +625,32 @@ export function FolderTree({ folders, onFolderSelect, selectedFolder, onFolderCr
                     fileKey={reviewFile.key}
                     fileName={reviewFile.name}
                     onClose={() => setReviewFile(null)}
+                />
+            )}
+
+            {analyzeFolder && (
+                <FolderAnalysisPanel
+                    folderPath={analyzeFolder.path}
+                    folderName={analyzeFolder.name}
+                    onClose={() => setAnalyzeFolder(null)}
+                />
+            )}
+
+            {editingFile && fileContent && (
+                <FileEditor
+                    fileKey={editingFile.key}
+                    fileName={editingFile.name}
+                    initialContent={fileContent}
+                    onClose={() => {
+                        setEditingFile(null);
+                        setFileContent('');
+                    }}
+                    onSave={() => {
+                        setEditingFile(null);
+                        setFileContent('');
+                        // Reload files to reflect changes
+                        onFolderCreated();
+                    }}
                 />
             )}
         </>

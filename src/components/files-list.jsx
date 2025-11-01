@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { Card } from '@/components/ui/card';
-import { Download, FileIcon, Trash2, Upload } from 'lucide-react';
+import { Download, FileIcon, Trash2, Upload, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { FileEditor } from '@/components/file-editor';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -42,6 +43,9 @@ export function FilesList({ refreshTrigger, currentFolder = '' }) {
     const [uploading, setUploading] = useState(null);
     const [customFileName, setCustomFileName] = useState('');
     const fileInputRefs = useRef({});
+    const [showEditor, setShowEditor] = useState(false);
+    const [editingFile, setEditingFile] = useState(null);
+    const [fileContent, setFileContent] = useState('');
 
     // Helper function to get file extension
     const getFileExtension = (filename) => {
@@ -76,6 +80,24 @@ export function FilesList({ refreshTrigger, currentFolder = '' }) {
 
     const openDeleteDialog = (file) => {
         setDeleteDialog({ open: true, file });
+    };
+
+    const handleEdit = async (file) => {
+        try {
+            const response = await fetch(`/api/file-content?fileKey=${encodeURIComponent(file.key)}`);
+            if (!response.ok) {
+                throw new Error('Failed to load file content');
+            }
+            const data = await response.json();
+            setFileContent(data.content);
+            setEditingFile(file);
+            setShowEditor(true);
+        } catch (error) {
+            console.error('Error loading file:', error);
+            toast.error('Failed to load file for editing', {
+                description: error.message,
+            });
+        }
     };
 
     const handleOverwriteClick = (file) => {
@@ -268,6 +290,16 @@ export function FilesList({ refreshTrigger, currentFolder = '' }) {
                                 </div>
                             </div>
                             <div className="flex gap-2">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEdit(file)}
+                                    disabled={uploading === file.key || deleting === file.key}
+                                    className="text-blue-600 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                                >
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit
+                                </Button>
                                 <Button asChild variant="ghost" size="sm">
                                     <a
                                         href={file.url}
@@ -369,6 +401,27 @@ export function FilesList({ refreshTrigger, currentFolder = '' }) {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* File Editor Modal */}
+            {showEditor && editingFile && (
+                <FileEditor
+                    fileKey={editingFile.key}
+                    fileName={editingFile.name}
+                    initialContent={fileContent}
+                    onClose={() => {
+                        setShowEditor(false);
+                        setEditingFile(null);
+                        setFileContent('');
+                    }}
+                    onSave={() => {
+                        setShowEditor(false);
+                        setEditingFile(null);
+                        setFileContent('');
+                        // Reload files to reflect changes
+                        loadFiles();
+                    }}
+                />
+            )}
         </div>
     );
 }

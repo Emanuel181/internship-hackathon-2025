@@ -44,8 +44,29 @@ export async function POST(request) {
       return NextResponse.json({
         success: true,
         message: 'No changes detected',
+        fileName: fileName || fileKey.split('/').pop(),
+        fileKey,
+        content: currentContent,
         changedLines: [],
-        issues: [],
+        analysis: {
+          issues: [],
+          metrics: {
+            totalLines: currentContent.split('\n').length,
+            codeLines: 0,
+            commentLines: 0,
+            blankLines: 0,
+            errorCount: 0,
+            warningCount: 0,
+            infoCount: 0,
+            qualityScore: 100,
+            incrementalData: {
+              linesChanged: 0,
+              linesAdded: 0,
+              linesDeleted: 0,
+              issuesFound: 0,
+            },
+          },
+        },
       });
     }
 
@@ -85,6 +106,9 @@ export async function POST(request) {
     return NextResponse.json({
       success: true,
       reviewType: 'incremental',
+      fileName: fileName || fileKey.split('/').pop(),
+      fileKey,
+      content: currentContent,
       changedLines,
       analysis: {
         issues: incrementalIssues,
@@ -98,7 +122,6 @@ export async function POST(request) {
           },
         },
       },
-      fileName,
     });
   } catch (error) {
     console.error('Incremental review API error:', error);

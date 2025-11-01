@@ -75,29 +75,34 @@ export async function deleteFile(key) {
 }
 
 export async function getFileContent(key) {
-    const command = new GetObjectCommand({
-        Bucket: process.env.AWS_S3_BUCKET_NAME,
-        Key: key,
-    });
-
-    const response = await s3Client.send(command);
-
-    // Convert stream to string
-    const stream = response.Body;
-    const chunks = [];
-
-    for await (const chunk of stream) {
-        chunks.push(chunk);
-    }
-
-    const buffer = Buffer.concat(chunks);
-
-    // Try to convert to text (for text files)
     try {
-        return buffer.toString('utf-8');
+        const command = new GetObjectCommand({
+            Bucket: process.env.AWS_S3_BUCKET_NAME,
+            Key: key,
+        });
+
+        const response = await s3Client.send(command);
+
+        // Convert stream to string
+        const stream = response.Body;
+        const chunks = [];
+
+        for await (const chunk of stream) {
+            chunks.push(chunk);
+        }
+
+        const buffer = Buffer.concat(chunks);
+
+        // Try to convert to text (for text files)
+        try {
+            return buffer.toString('utf-8');
+        } catch (error) {
+            // If not text, return base64
+            return buffer.toString('base64');
+        }
     } catch (error) {
-        // If not text, return base64
-        return buffer.toString('base64');
+        console.error('Error in getFileContent:', error.message);
+        throw error;
     }
 }
 
@@ -118,4 +123,37 @@ export async function uploadFile(key, content) {
     return { success: true, key };
 }
 
+/**
+ * Upload/update file content directly to S3 (overwrites existing content)
+ */
+export async function uploadFileContent(key, content) {
+    const buffer = Buffer.isBuffer(content) ? content : Buffer.from(content, 'utf-8');
 
+    const command = new PutObjectCommand({
+        Bucket: process.env.AWS_S3_BUCKET_NAME,
+        Key: key,
+        Body: buffer,
+        ContentType: 'application/octet-stream',
+    });
+
+    await s3Client.send(command);
+    return { success: true, key, size: buffer.length };
+}
+
+/**
+ * List all files in a folder (recursively)
+ */
+export async function listFilesInFolder(folderPath) {
+    // folderPath format: userId/folder/subfolder
+    const command = new ListObjectsV2Command({
+        Bucket: process.env.AWS_S3_BUCKET_NAME,
+        Prefix: folderPath.endsWith('/') ? folderPath : `${folderPath}/`,
+    });
+
+    const response = await s3Client.send(command);
+    return (response.Contents || []).map(item => ({
+        key: item.Key,
+        size: item.Size,
+        lastModified: item.LastModified,
+    }));
+}

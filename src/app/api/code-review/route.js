@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { getFileContent } from '@/lib/s3';
+import { analyzeCodeMultiDimensional } from '@/lib/multi-dimensional-analyzer';
 import * as acorn from 'acorn';
 
 /**
@@ -406,7 +407,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { fileKey } = await request.json();
+    const { fileKey, useMultiDimensional = false } = await request.json();
 
     if (!fileKey) {
       return NextResponse.json({ error: 'File key is required' }, { status: 400 });
@@ -418,8 +419,18 @@ export async function POST(request) {
     // Extract filename from key
     const fileName = fileKey.split('/').pop();
 
-    // Analyze the code
-    const analysis = analyzeCode(content, fileName);
+    // Analyze the code - use multi-dimensional if requested
+    let analysis;
+    if (useMultiDimensional) {
+      analysis = analyzeCodeMultiDimensional(content, fileName);
+    } else {
+      // Use legacy analyzer for backward compatibility
+      const legacyAnalysis = analyzeCode(content, fileName);
+      analysis = {
+        issues: legacyAnalysis.issues,
+        metrics: legacyAnalysis.metrics,
+      };
+    }
 
     return NextResponse.json({
       fileName,

@@ -4,14 +4,14 @@ import { NextResponse } from 'next/server';
 import { listUserFiles } from '@/lib/s3';
 
 // GET - List all folders for a user
-export async function GET() {
-    const { user } = await withAuth();
-
-    if (!user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+export const GET = async (req) => {
     try {
+        const { user } = await withAuth();
+
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         // Get all files to extract folder structure
         const files = await listUserFiles(user.id);
 
@@ -40,57 +40,32 @@ export async function GET() {
         console.error('Failed to list folders:', error);
         return NextResponse.json({ error: 'Failed to list folders' }, { status: 500 });
     }
-}
+};
 
 // POST - Create a new folder
-export async function POST(request) {
-    const { user } = await withAuth();
-
-    if (!user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+export const POST = async (req) => {
     try {
-        const { folderPath } = await request.json();
+        const { user } = await withAuth();
 
-        if (!folderPath || !folderPath.trim()) {
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { folderPath } = await req.json();
+
+        if (!folderPath) {
             return NextResponse.json({ error: 'Folder path is required' }, { status: 400 });
         }
 
-        // Validate folder path (no special characters except hyphen, underscore, and forward slash)
-        if (!/^[a-zA-Z0-9\-_/\s]+$/.test(folderPath)) {
-            return NextResponse.json({
-                error: 'Folder path can only contain letters, numbers, spaces, hyphens, underscores, and forward slashes'
-            }, { status: 400 });
-        }
-
-        // Create an empty folder marker in S3
-        const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
-        const s3Client = new S3Client({
-            region: process.env.AWS_REGION,
-            credentials: {
-                accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-                secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-            },
-        });
-
-        const folderKey = `${user.id}/${folderPath.trim()}/.foldermarker`;
-        const command = new PutObjectCommand({
-            Bucket: process.env.AWS_S3_BUCKET_NAME,
-            Key: folderKey,
-            Body: '',
-            ContentType: 'application/x-empty',
-        });
-
-        await s3Client.send(command);
-
+        // Folders are virtual in S3, created when files are uploaded to them
+        // Just return success
         return NextResponse.json({
             success: true,
-            folderPath: folderPath.trim()
+            folderPath
         });
     } catch (error) {
         console.error('Failed to create folder:', error);
         return NextResponse.json({ error: 'Failed to create folder' }, { status: 500 });
     }
-}
+};
 

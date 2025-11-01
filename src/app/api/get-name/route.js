@@ -1,13 +1,31 @@
-import { authkit } from "@workos-inc/authkit-nextjs";
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
+import { withAuth } from '@workos-inc/authkit-nextjs';
 
-export const GET = async (request) => {
-    // Use 'authkit' for edge functions that don't have access to headers
-    const { session } = await authkit(request);
+export const GET = async (req) => {
+  try {
+    const { user } = await withAuth();
 
-    if (!session || !session.user) {
-        return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    return NextResponse.json({ user: session.user });
+    return NextResponse.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch user', details: error.message },
+      { status: 500 }
+    );
+  }
 };
+

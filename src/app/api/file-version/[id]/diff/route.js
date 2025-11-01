@@ -1,84 +1,85 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { getFileVersion, getLatestFileVersion } from '@/lib/version-tracker';
-import { calculateDiff, getChangedSections, getDiffStats } from '@/lib/diff-engine';
+import { generateDiff } from '@/lib/diff-engine';
+import prisma from '@/lib/prisma';
 
 /**
+ * GET /api/file-version/[id]/diff?compareWith=...
  * Get diff between two file versions
  */
-export async function GET(request, { params }) {
+export const GET = async (req, { params }) => {
   try {
     const { user } = await withAuth();
+    
+    const { id } = params;
+    const { searchParams } = new URL(req.url);
+    const compareWith = searchParams.get('compareWith'); // 'latest' or version ID
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const currentVersion = await getFileVersion(id);
+
+    if (!currentVersion) {
+      return NextResponse.json(
+        { error: 'Version not found' },
+        { status: 404 }
+      );
     }
 
-    const versionId = params.id;
-    const { searchParams } = new URL(request.url);
-    const compareWith = searchParams.get('compareWith'); // 'previous' or specific version ID
-
-    // Get the target version
-    const targetVersion = await getFileVersion(versionId);
-
-    if (!targetVersion) {
-      return NextResponse.json({ error: 'Version not found' }, { status: 404 });
-    }
-
-    // Determine comparison version
     let compareVersion;
+
     if (compareWith === 'latest') {
-      compareVersion = await getLatestFileVersion(targetVersion.fileKey);
+      compareVersion = await getLatestFileVersion(currentVersion.fileKey);
     } else if (compareWith) {
       compareVersion = await getFileVersion(compareWith);
     } else {
-      // Get previous version
-      const { prisma } = await import('@/lib/prisma');
+      // Compare with previous version
       compareVersion = await prisma.fileVersion.findFirst({
         where: {
-          fileKey: targetVersion.fileKey,
-          version: { lt: targetVersion.version },
+          fileKey: currentVersion.fileKey,
+          version: { lt: currentVersion.version },
         },
         orderBy: { version: 'desc' },
       });
     }
 
     if (!compareVersion) {
-      return NextResponse.json({
-        error: 'No version to compare with',
-        message: 'This is the first version of the file',
-      }, { status: 404 });
+      return NextResponse.json(
+        { error: 'No version to compare with' },
+        { status: 404 }
+      );
     }
 
-    // Calculate diff
-    const diff = calculateDiff(compareVersion.content, targetVersion.content);
-    const sections = getChangedSections(diff, 3);
-    const stats = getDiffStats(diff);
+    // Generate diff
+    const diff = generateDiff(compareVersion.content, currentVersion.content);
 
     return NextResponse.json({
       success: true,
-      diff: {
-        oldVersion: {
-          id: compareVersion.id,
-          version: compareVersion.version,
-          hash: compareVersion.hash,
-        },
-        newVersion: {
-          id: targetVersion.id,
-          version: targetVersion.version,
-          hash: targetVersion.hash,
-        },
-        changes: diff,
-        sections,
-        stats,
+      currentVersion: {
+        id: currentVersion.id,
+        version: currentVersion.version,
+        createdAt: currentVersion.createdAt,
+        size: currentVersion.size,
+      },
+      compareVersion: {
+        id: compareVersion.id,
+        version: compareVersion.version,
+        createdAt: compareVersion.createdAt,
+        size: compareVersion.size,
+      },
+      diff,
+      stats: {
+        linesAdded: diff.filter(d => d.type === 'added').length,
+        linesRemoved: diff.filter(d => d.type === 'deleted').length,
+        linesChanged: diff.filter(d => d.type === 'modified').length,
       },
     });
+
   } catch (error) {
-    console.error('Diff API error:', error);
+    console.error('Error generating diff:', error);
     return NextResponse.json(
-      { error: 'Failed to calculate diff', details: error.message },
+      { error: 'Failed to generate diff', details: error.message },
       { status: 500 }
     );
   }
-}
+};
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import prisma from '@/lib/prisma';
+import { syncUser } from '@/lib/sync-user';
 
 /**
  * Create a review comment
@@ -13,6 +14,9 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Ensure user exists in database
+    await syncUser(user);
+
     const { reviewId, fileKey, fileName, lineNumber, content, type, parentId, issueId } = await request.json();
 
     if (!fileKey || !content) {
@@ -22,18 +26,23 @@ export async function POST(request) {
       );
     }
 
+    // Build data object, only include optional fields if they have values
+    const commentData = {
+      userId: user.id,
+      fileKey,
+      fileName: fileName || '',
+      lineNumber: lineNumber || 0,
+      content,
+      type: type || 'comment',
+    };
+
+    // Only add optional foreign keys if they have values
+    if (reviewId) commentData.reviewId = reviewId;
+    if (issueId) commentData.issueId = issueId;
+    if (parentId) commentData.parentId = parentId;
+
     const comment = await prisma.reviewComment.create({
-      data: {
-        reviewId: reviewId || null,
-        userId: user.id,
-        fileKey,
-        fileName: fileName || '',
-        lineNumber: lineNumber || 0,
-        issueId: issueId || null,
-        content,
-        type: type || 'comment',
-        parentId: parentId || null,
-      },
+      data: commentData,
       include: {
         user: {
           select: {

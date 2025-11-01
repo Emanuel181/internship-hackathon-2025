@@ -3,14 +3,14 @@ import { withAuth } from '@workos-inc/authkit-nextjs';
 import { NextResponse } from 'next/server';
 import { listUserFiles, getFileUrl, getCleanFileName, getFolderPath } from '@/lib/s3';
 
-export async function GET() {
-    const { user } = await withAuth();
-
-    if (!user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+export const GET = async (req) => {
     try {
+        const { user } = await withAuth();
+
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const files = await listUserFiles(user.id);
 
         const filesWithUrls = await Promise.all(
@@ -29,4 +29,4 @@ export async function GET() {
         console.error('Failed to list files:', error);
         return NextResponse.json({ error: 'Failed to list files' }, { status: 500 });
     }
-}
+};
