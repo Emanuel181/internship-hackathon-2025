@@ -1,0 +1,266 @@
+name: Deploy to ECS
+
+on:
+  push:
+    branches:
+      - '**'
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ECS_CLUSTER: ${{ vars.ECS_CLUSTER_PRODUCTION }}
+  ECS_SERVICE: ${{ vars.ECS_SERVICE_PRODUCTION }}
+
+jobs:
+  # 🔍 Code Quality Scan
+  sonarcloud:
+    name: Code Quality Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v5.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+        continue-on-error: true
+
+  # 🛡Security Scan
+  codeql:
+    name: Security Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript-typescript"
+        continue-on-error: true
+
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify and Trim ECS Variables
+        id: ecs-vars
+        shell: bash
+        run: |
+          CLUSTER_NAME=$(echo "${{ vars.ECS_CLUSTER_PRODUCTION }}" | xargs)
+          SERVICE_NAME=$(echo "${{ vars.ECS_SERVICE_PRODUCTION }}" | xargs)
+          
+          if [ -z "$CLUSTER_NAME" ]; then
+            echo "::error::ECS_CLUSTER_PRODUCTION variable is not set or is empty."
+            exit 1
+          fi
+          
+          if [ -z "$SERVICE_NAME" ]; then
+            echo "::error::ECS_SERVICE_PRODUCTION variable is not set or is empty."
+            exit 1
+          fi
+          
+          echo "cluster_name=$CLUSTER_NAME" >> "$GITHUB_OUTPUT"
+          echo "service_name=$SERVICE_NAME" >> "$GITHUB_OUTPUT"
+          echo "ECS Cluster and Service names are present."
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_ID }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Compute image repository
+        id: repo
+        shell: bash
+        run: |
+          REPO_INPUT='${{ secrets.ECR_REPOSITORY }}'
+          REG='${{ steps.login-ecr.outputs.registry }}'
+          if [[ "$REPO_INPUT" == *"amazonaws.com"* ]]; then
+            IMAGE_REPO="$REPO_INPUT"
+          else
+            IMAGE_REPO="$REG/$REPO_INPUT"
+          fi
+          echo "image=$IMAGE_REPO" >> $GITHUB_OUTPUT
+          echo "Using image repository: $IMAGE_REPO"
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.repo.outputs.image }}
+          tags: |
+            type=sha
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            NEXT_PUBLIC_WORKOS_REDIRECT_URI=${{ vars.NEXT_PUBLIC_WORKOS_REDIRECT_URI }}
+            WORKOS_COOKIE_PASSWORD=${{ secrets.WORKOS_COOKIE_PASSWORD }}
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Resolve new image tag
+        id: image
+        shell: bash
+        run: |
+          SHA_TAG=$(echo "${{ steps.meta.outputs.tags }}" | tr ' ' '\n' | grep ":sha-" | head -n1)
+          if [ -z "$SHA_TAG" ]; then
+            echo "Failed to resolve SHA tag from metadata" >&2
+            exit 1
+          fi
+          echo "tag=${SHA_TAG}" >> $GITHUB_OUTPUT
+          echo "repo_base=${SHA_TAG%%:*}" >> $GITHUB_OUTPUT
+          echo "Using image: ${SHA_TAG}"
+
+      ## 🛠️ Prisma Database Migration
+
+      - name: Setup Node.js for Prisma
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies for Prisma
+        run: npm ci --legacy-peer-deps
+
+      - name: Run Prisma Migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
+      ## 🚀 ECS Deployment
+
+      - name: Describe current task definition
+        id: describe-td
+        run: |
+          echo "Describing service '${{ steps.ecs-vars.outputs.service_name }}' in cluster '${{ steps.ecs-vars.outputs.cluster_name }}'..."
+          SERVICE_DESC=$(aws ecs describe-services --cluster "${{ steps.ecs-vars.outputs.cluster_name }}" --services "${{ steps.ecs-vars.outputs.service_name }}")
+          TASK_DEF_ARN=$(echo "$SERVICE_DESC" | jq -r '.services[0].taskDefinition')
+          if [ -z "$TASK_DEF_ARN" ] || [ "$TASK_DEF_ARN" = "null" ]; then
+            echo "Could not resolve current task definition ARN" >&2
+            echo "$SERVICE_DESC" >&2
+            exit 1
+          fi
+          aws ecs describe-task-definition --task-definition "$TASK_DEF_ARN" --query 'taskDefinition' > td.json
+          jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' td.json > td.stripped.json
+          echo "task_def_file=td.stripped.json" >> "$GITHUB_OUTPUT"
+
+      - name: Update container image and inject environment variables
+        id: render-td
+        shell: bash
+        run: |
+          IMAGE="${{ steps.image.outputs.tag }}"
+          REPO_BASE="${{ steps.image.outputs.repo_base }}"
+          TD_FILE="${{ steps.describe-td.outputs.task_def_file }}"
+
+          echo "Updating to image: $IMAGE"
+
+          ENV_VARS_JSON=$(jq -n \
+            --arg workos_api_key "${{ secrets.WORKOS_API_KEY }}" \
+            --arg workos_client_id "${{ secrets.WORKOS_CLIENT_ID }}" \
+            --arg database_url "${{ secrets.DATABASE_URL }}" \
+            --arg direct_url "${{ secrets.DIRECT_URL }}" \
+            --arg redirect_uri "${{ vars.NEXT_PUBLIC_WORKOS_REDIRECT_URI }}" \
+            --arg cookie_password "${{ secrets.WORKOS_COOKIE_PASSWORD }}" \
+            --arg aws_region "${{ vars.AWS_REGION }}" \
+            --arg aws_access_key_id "${{ secrets.AWS_ACCESS_KEY_ID }}" \
+            --arg aws_secret_access_key "${{ secrets.AWS_SECRET_ACCESS_KEY_ID }}" \
+            --arg s3_bucket_name "${{ vars.AWS_S3_BUCKET_NAME }}" \
+            --arg llm_type "${{ vars.LLM_TYPE }}" \
+            --arg llm_endpoint "${{ vars.LLM_ENDPOINT }}" \
+            --arg llm_model "${{ vars.LLM_MODEL }}" \
+            '[
+              {"name": "APP_BASE_URL", "value": "https://hfhackathon.com"},
+              {"name": "DATABASE_URL", "value": $database_url},
+              {"name": "DIRECT_URL", "value": $direct_url},
+              {"name": "NEXT_PUBLIC_WORKOS_REDIRECT_URI", "value": $redirect_uri},
+              {"name": "WORKOS_API_KEY", "value": $workos_api_key},
+              {"name": "WORKOS_CLIENT_ID", "value": $workos_client_id},
+              {"name": "WORKOS_COOKIE_PASSWORD", "value": $cookie_password},
+              {"name": "WORKOS_REDIRECT_URI", "value": $redirect_uri},
+              {"name": "AWS_REGION", "value": $aws_region},
+              {"name": "AWS_ACCESS_KEY_ID", "value": $aws_access_key_id},
+              {"name": "AWS_SECRET_ACCESS_KEY", "value": $aws_secret_access_key},
+              {"name": "AWS_S3_BUCKET_NAME", "value": $s3_bucket_name},
+              {"name": "LLM_TYPE", "value": $llm_type},
+              {"name": "LLM_ENDPOINT", "value": $llm_endpoint},
+              {"name": "LLM_MODEL", "value": $llm_model}
+          
+            ]')
+
+          # Find container index - default to 0
+          IDX=$(jq '[.containerDefinitions | to_entries | .[] | select(.value.name == "container-hackathon") | .key] | first // 0' "$TD_FILE")
+          echo "Updating container at index $IDX"
+
+          # Update image tag AND set environment variables
+          jq --arg image "$IMAGE" --argjson idx "$IDX" \
+            --argjson env_vars "$ENV_VARS_JSON" \
+            '.containerDefinitions[$idx].image = $image | .containerDefinitions[$idx].environment = $env_vars' \
+            "$TD_FILE" > td.rendered.json
+
+          # Verify the image was updated
+          NEW_IMAGE=$(jq -r ".containerDefinitions[$IDX].image" td.rendered.json)
+          echo "Verified new image in task def: $NEW_IMAGE"
+          
+          if [ "$NEW_IMAGE" != "$IMAGE" ]; then
+            echo "ERROR: Image was not updated properly!" >&2
+            exit 1
+          fi
+
+          echo "rendered=td.rendered.json" >> $GITHUB_OUTPUT
+
+      - name: Register new task definition
+        id: register-td
+        run: |
+          NEW_TD_JSON=$(aws ecs register-task-definition --cli-input-json file://td.rendered.json)
+          NEW_TD_ARN=$(echo "$NEW_TD_JSON" | jq -r '.taskDefinition.taskDefinitionArn')
+          if [ -z "$NEW_TD_ARN" ] || [ "$NEW_TD_ARN" = "null" ]; then
+            echo "Failed to register new task definition" >&2
+            echo "$NEW_TD_JSON" >&2
+            exit 1
+          fi
+          echo "arn=$NEW_TD_ARN" >> $GITHUB_OUTPUT
+          echo "Registered new task definition: $NEW_TD_ARN"
+
+      - name: Update ECS service to new task definition
+        run: |
+          aws ecs update-service \
+            --cluster "${{ steps.ecs-vars.outputs.cluster_name }}" \
+            --service "${{ steps.ecs-vars.outputs.service_name }}" \
+            --task-definition "${{ steps.register-td.outputs.arn }}" \
+            --force-new-deployment
+          echo "Service updated successfully"
