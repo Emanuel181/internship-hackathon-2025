@@ -4,13 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="84c72250-65ef-442e-ba3c-be751bb94ddf" name="Changes" comment="m">
-      <change afterPath="$PROJECT_DIR$/.github/workflows/deploy.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/app/api/ai-review/route.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/app/api/code-review/route.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/code-review-panel.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/lib/llm-config.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/scripts/test-llm-config.js" afterDir="false" />
+    <list default="true" id="84c72250-65ef-442e-ba3c-be751bb94ddf" name="Changes" comment="first trial">
+      <change beforePath="$PROJECT_DIR$/.idea/copilotDiffState.xml" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -127,23 +122,7 @@
       <workItem from="1761605194999" duration="34332000" />
       <workItem from="1761984699534" duration="9000" />
       <workItem from="1761984781692" duration="4000" />
-      <workItem from="1761984789007" duration="7764000" />
-    </task>
-    <task id="LOCAL-00001" summary="m">
-      <option name="closed" value="true" />
-      <created>1761265686725</created>
-      <option name="number" value="00001" />
-      <option name="presentableId" value="LOCAL-00001" />
-      <option name="project" value="LOCAL" />
-      <updated>1761265686725</updated>
-    </task>
-    <task id="LOCAL-00002" summary="m">
-      <option name="closed" value="true" />
-      <created>1761277134508</created>
-      <option name="number" value="00002" />
-      <option name="presentableId" value="LOCAL-00002" />
-      <option name="project" value="LOCAL" />
-      <updated>1761277134508</updated>
+      <workItem from="1761984789007" duration="8062000" />
     </task>
     <task id="LOCAL-00003" summary="m">
       <option name="closed" value="true" />
@@ -521,7 +500,23 @@
       <option name="project" value="LOCAL" />
       <updated>1761954792314</updated>
     </task>
-    <option name="localTasksCounter" value="50" />
+    <task id="LOCAL-00050" summary="first trial">
+      <option name="closed" value="true" />
+      <created>1761993305662</created>
+      <option name="number" value="00050" />
+      <option name="presentableId" value="LOCAL-00050" />
+      <option name="project" value="LOCAL" />
+      <updated>1761993305662</updated>
+    </task>
+    <task id="LOCAL-00051" summary="first trial">
+      <option name="closed" value="true" />
+      <created>1761993474059</created>
+      <option name="number" value="00051" />
+      <option name="presentableId" value="LOCAL-00051" />
+      <option name="project" value="LOCAL" />
+      <updated>1761993474059</updated>
+    </task>
+    <option name="localTasksCounter" value="52" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -530,6 +525,7 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Initial commit from Create Next App" />
     <MESSAGE value="m" />
-    <option name="LAST_COMMIT_MESSAGE" value="m" />
+    <MESSAGE value="first trial" />
+    <option name="LAST_COMMIT_MESSAGE" value="first trial" />
   </component>
 </project>

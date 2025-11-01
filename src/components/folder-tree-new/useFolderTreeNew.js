@@ -370,7 +370,6 @@ export function useFolderTreeNew({ onFolderCreated, onFolderSelect, selectedFold
         dropSuccessFolder,
 
         // Setters
-        setExpandedFolders,
         setNewFolderName,
         setHoveredFolder,
         setDeleteFileDialog,
